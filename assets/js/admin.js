@@ -82,7 +82,7 @@
         });
         
         // Image generation form validation
-        $('form[action*="wp_blog_agent_generate_image"]').on('submit', function(e) {
+        $('form:has(input[name="action"][value="wp_blog_agent_generate_image"])').on('submit', function(e) {
             const prompt = $('#image_prompt').val().trim();
             
             if (!prompt) {
