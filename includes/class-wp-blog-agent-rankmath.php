@@ -240,11 +240,30 @@ class WP_Blog_Agent_RankMath {
                 return new WP_Error('api_error', $error_message);
             }
             
-            if (isset($body['choices'][0]['message']['content'])) {
-                return $body['choices'][0]['message']['content'];
+            // Validate response structure
+            if (!is_array($body)) {
+                WP_Blog_Agent_Logger::error('OpenAI SEO Invalid Response Format', array('body' => $body));
+                return new WP_Error('invalid_response', 'Invalid response format from OpenAI API: Response is not an array.');
             }
             
-            return new WP_Error('invalid_response', 'Invalid response from OpenAI API.');
+            if (!isset($body['choices']) || !is_array($body['choices']) || empty($body['choices'])) {
+                WP_Blog_Agent_Logger::error('OpenAI SEO Missing Choices', array('body' => $body));
+                return new WP_Error('invalid_response', 'Invalid response from OpenAI API: No choices returned.');
+            }
+            
+            if (!isset($body['choices'][0]['message']['content'])) {
+                WP_Blog_Agent_Logger::error('OpenAI SEO Missing Content', array('choice' => isset($body['choices'][0]) ? $body['choices'][0] : 'N/A'));
+                return new WP_Error('invalid_response', 'Invalid response from OpenAI API: No content in message.');
+            }
+            
+            $content = $body['choices'][0]['message']['content'];
+            
+            if (!is_string($content) || trim($content) === '') {
+                WP_Blog_Agent_Logger::error('OpenAI SEO Empty Content', array('content_type' => gettype($content)));
+                return new WP_Error('invalid_response', 'Invalid response from OpenAI API: Content is empty.');
+            }
+            
+            return $content;
         } catch (Exception $e) {
             return new WP_Error('exception', 'Exception in OpenAI generation: ' . $e->getMessage());
         }
@@ -310,11 +329,30 @@ class WP_Blog_Agent_RankMath {
                 return new WP_Error('api_error', $error_message);
             }
             
-            if (isset($body['candidates'][0]['content']['parts'][0]['text'])) {
-                return $body['candidates'][0]['content']['parts'][0]['text'];
+            // Validate response structure
+            if (!is_array($body)) {
+                WP_Blog_Agent_Logger::error('Gemini SEO Invalid Response Format', array('body' => $body));
+                return new WP_Error('invalid_response', 'Invalid response format from Gemini API: Response is not an array.');
             }
             
-            return new WP_Error('invalid_response', 'Invalid response from Gemini API.');
+            if (!isset($body['candidates']) || !is_array($body['candidates']) || empty($body['candidates'])) {
+                WP_Blog_Agent_Logger::error('Gemini SEO Missing Candidates', array('body' => $body));
+                return new WP_Error('invalid_response', 'Invalid response from Gemini API: No candidates returned.');
+            }
+            
+            if (!isset($body['candidates'][0]['content']['parts'][0]['text'])) {
+                WP_Blog_Agent_Logger::error('Gemini SEO Missing Text', array('candidate' => isset($body['candidates'][0]) ? $body['candidates'][0] : 'N/A'));
+                return new WP_Error('invalid_response', 'Invalid response from Gemini API: No text in candidate.');
+            }
+            
+            $content = $body['candidates'][0]['content']['parts'][0]['text'];
+            
+            if (!is_string($content) || trim($content) === '') {
+                WP_Blog_Agent_Logger::error('Gemini SEO Empty Content', array('content_type' => gettype($content)));
+                return new WP_Error('invalid_response', 'Invalid response from Gemini API: Content is empty.');
+            }
+            
+            return $content;
         } catch (Exception $e) {
             return new WP_Error('exception', 'Exception in Gemini generation: ' . $e->getMessage());
         }
@@ -368,11 +406,25 @@ class WP_Blog_Agent_RankMath {
                 return new WP_Error('api_error', $error_message);
             }
             
-            if (isset($body['response'])) {
-                return $body['response'];
+            // Validate response structure
+            if (!is_array($body)) {
+                WP_Blog_Agent_Logger::error('Ollama SEO Invalid Response Format', array('body' => $body));
+                return new WP_Error('invalid_response', 'Invalid response format from Ollama API: Response is not an array.');
             }
             
-            return new WP_Error('invalid_response', 'Invalid response from Ollama API.');
+            if (!isset($body['response'])) {
+                WP_Blog_Agent_Logger::error('Ollama SEO Missing Response', array('body' => $body));
+                return new WP_Error('invalid_response', 'Invalid response from Ollama API: No response field.');
+            }
+            
+            $content = $body['response'];
+            
+            if (!is_string($content) || trim($content) === '') {
+                WP_Blog_Agent_Logger::error('Ollama SEO Empty Content', array('content_type' => gettype($content)));
+                return new WP_Error('invalid_response', 'Invalid response from Ollama API: Content is empty.');
+            }
+            
+            return $content;
         } catch (Exception $e) {
             return new WP_Error('exception', 'Exception in Ollama generation: ' . $e->getMessage());
         }
