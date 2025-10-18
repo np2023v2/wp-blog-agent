@@ -1,7 +1,7 @@
 <div class="wrap">
     <h1><?php echo esc_html__('WP Blog Agent - Settings', 'wp-blog-agent'); ?></h1>
     
-    <form method="post" action="">
+    <form method="post" action="" name="wp_blog_agent_settings">
         <?php wp_nonce_field('wp_blog_agent_settings', 'wp_blog_agent_settings_nonce'); ?>
         
         <table class="form-table">
