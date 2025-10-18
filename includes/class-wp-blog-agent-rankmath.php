@@ -258,8 +258,8 @@ class WP_Blog_Agent_RankMath {
             
             $content = $body['choices'][0]['message']['content'];
             
-            if (empty($content)) {
-                WP_Blog_Agent_Logger::error('OpenAI SEO Empty Content', array('choice' => $body['choices'][0]));
+            if (!is_string($content) || trim($content) === '') {
+                WP_Blog_Agent_Logger::error('OpenAI SEO Empty Content', array('content_type' => gettype($content)));
                 return new WP_Error('invalid_response', 'Invalid response from OpenAI API: Content is empty.');
             }
             
@@ -347,8 +347,8 @@ class WP_Blog_Agent_RankMath {
             
             $content = $body['candidates'][0]['content']['parts'][0]['text'];
             
-            if (empty($content)) {
-                WP_Blog_Agent_Logger::error('Gemini SEO Empty Content', array('candidate' => $body['candidates'][0]));
+            if (!is_string($content) || trim($content) === '') {
+                WP_Blog_Agent_Logger::error('Gemini SEO Empty Content', array('content_type' => gettype($content)));
                 return new WP_Error('invalid_response', 'Invalid response from Gemini API: Content is empty.');
             }
             
@@ -419,8 +419,8 @@ class WP_Blog_Agent_RankMath {
             
             $content = $body['response'];
             
-            if (empty($content)) {
-                WP_Blog_Agent_Logger::error('Ollama SEO Empty Content', array('body' => $body));
+            if (!is_string($content) || trim($content) === '') {
+                WP_Blog_Agent_Logger::error('Ollama SEO Empty Content', array('content_type' => gettype($content)));
                 return new WP_Error('invalid_response', 'Invalid response from Ollama API: Content is empty.');
             }
             
