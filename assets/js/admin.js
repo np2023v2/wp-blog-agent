@@ -62,8 +62,8 @@
             }
         }).trigger('change');
         
-        // Form validation
-        $('form').on('submit', function(e) {
+        // Settings form validation - only apply to settings page
+        $('form[name="wp_blog_agent_settings"]').on('submit', function(e) {
             const provider = $('#ai_provider').val();
             let apiKey = '';
             
@@ -77,6 +77,18 @@
             if (!apiKey && provider !== 'ollama' && $('#schedule_enabled').val() === 'yes') {
                 e.preventDefault();
                 alert('Please enter an API key for the selected AI provider before enabling scheduling.');
+                return false;
+            }
+        });
+        
+        // Image generation form validation
+        $('form[action*="wp_blog_agent_generate_image"]').on('submit', function(e) {
+            const prompt = $('#image_prompt').val().trim();
+            
+            if (!prompt) {
+                e.preventDefault();
+                alert('Image prompt is required. Please enter a description of the image you want to generate.');
+                $('#image_prompt').focus();
                 return false;
             }
         });
