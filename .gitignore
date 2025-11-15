@@ -27,3 +27,15 @@ npm-debug.log
 # Composer
 vendor/
 composer.lock
+
+# Build artifacts
+build/
+dist/
+*.zip
+
+# Release files
+release_notes.txt
+
+# Testing
+coverage/
+.phpunit.result.cache

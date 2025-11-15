@@ -16,14 +16,14 @@
 #### WP_Blog_Agent_Activator
 - **Purpose**: Handles plugin activation
 - **Responsibilities**:
-  - Creates database tables (blog_agent_topics, blog_agent_queue)
+  - Creates database tables (blog_agent_topics, blog_agent_queue, blog_agent_series, blog_agent_series_posts)
   - Sets default options
-  - Schedules initial cron events
+  - Schedules initial cron events using WP_Blog_Agent_Cron
 
 #### WP_Blog_Agent_Deactivator
 - **Purpose**: Handles plugin deactivation
 - **Responsibilities**:
-  - Clears scheduled cron events
+  - Clears scheduled cron events using WP_Blog_Agent_Cron
   - Cleanup operations
 
 #### WP_Blog_Agent_Admin
@@ -69,14 +69,23 @@
   - Creates WordPress posts
   - Adds metadata to posts
 
-#### WP_Blog_Agent_Scheduler
-- **Purpose**: Automated scheduling
+#### WP_Blog_Agent_Cron
+- **Purpose**: Centralized cron job management
 - **Responsibilities**:
-  - Hooks into WordPress Cron
-  - Defines custom cron schedules
-  - Triggers scheduled post generation (via queue)
-  - Updates cron schedules
-  - Processes queue tasks
+  - Registers and manages WordPress cron hooks
+  - Defines custom cron schedules (hourly, twice daily, weekly)
+  - Schedules and unschedules cron events
+  - Handles post generation cron events
+  - Handles queue processing cron events
+  - Provides cron status monitoring
+  - Checks WordPress cron health
+
+#### WP_Blog_Agent_Scheduler
+- **Purpose**: Automated scheduling (legacy wrapper)
+- **Responsibilities**:
+  - Maintains backward compatibility
+  - Delegates to WP_Blog_Agent_Cron for all cron operations
+  - Updates cron schedules via WP_Blog_Agent_Cron
 
 #### WP_Blog_Agent_Queue
 - **Purpose**: Task queue management
@@ -87,6 +96,7 @@
   - Implements retry logic (up to 3 attempts)
   - Provides queue statistics
   - Cleanup old completed/failed tasks
+  - Uses WP_Blog_Agent_Cron for scheduling queue processing
 
 #### WP_Blog_Agent_Series
 - **Purpose**: Post series management and AI topic suggestions

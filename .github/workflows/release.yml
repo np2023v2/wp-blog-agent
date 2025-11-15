@@ -1,0 +1,62 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create release zip
+        run: |
+          mkdir -p build
+          rsync -av --progress . build/wp-blog-agent \
+            --exclude .git \
+            --exclude .github \
+            --exclude .gitignore \
+            --exclude build \
+            --exclude node_modules \
+            --exclude vendor \
+            --exclude .wordpress-org \
+            --exclude '*.md' \
+            --exclude bump-version.sh \
+            --exclude docs
+          cd build
+          zip -r wp-blog-agent-${{ steps.get_version.outputs.VERSION }}.zip wp-blog-agent/
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/wp-blog-agent-${{ steps.get_version.outputs.VERSION }}.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          # Extract changelog section for this version
+          awk "/## \[$VERSION\]/,/## \[/" CHANGELOG.md | sed '1d;$d' > release_notes.txt || echo "Release $VERSION" > release_notes.txt
+          
+      - name: Update release with changelog
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: release_notes.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -356,9 +356,10 @@ class WP_Blog_Agent_Health_Check {
             }
         }
         
-        // Check cron job
-        $next_run = wp_next_scheduled('wp_blog_agent_process_queue');
-        if ($next_run) {
+        // Check cron job using cron module
+        $cron_status = WP_Blog_Agent_Cron::get_status();
+        if ($cron_status['queue_processing']['scheduled']) {
+            $next_run = $cron_status['queue_processing']['timestamp'];
             $results['cron'] = array(
                 'scheduled' => true,
                 'next_run' => date('Y-m-d H:i:s', $next_run),

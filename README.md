@@ -1,5 +1,10 @@
 # WP Blog Agent
 
+[![Plugin Check](https://github.com/npsg02/wp-blog-agent/actions/workflows/plugin-check.yml/badge.svg)](https://github.com/npsg02/wp-blog-agent/actions/workflows/plugin-check.yml)
+[![WordPress Plugin Version](https://img.shields.io/badge/WordPress-5.0%2B-blue)](https://wordpress.org/)
+[![PHP Version](https://img.shields.io/badge/PHP-7.4%2B-purple)](https://www.php.net/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
 A powerful WordPress plugin that automates blog post generation using OpenAI GPT or Google Gemini AI. Create SEO-optimized content with hashtags, keywords, scheduling, and auto-publishing capabilities.
 
 ## Features
@@ -112,6 +117,9 @@ Navigate to **Blog Agent** → **Series** to:
 - **Create Series**: Create a new post series with a name and description
 - **View Series**: See all your post series and their statistics
 - **Add Posts to Series**: Add existing blog posts to a series
+  - **NEW**: Add ANY post to a series (AI-generated or manually created)
+  - Filter posts by type: All Posts, AI Generated, or Manual
+  - Posts are organized by type for easy selection
 - **AI Topic Suggestions**: Get AI-powered topic suggestions for the next post in a series
   - Click "Get AI Suggestions" on any series with at least one post
   - AI analyzes existing post titles in the series
@@ -120,6 +128,11 @@ Navigate to **Blog Agent** → **Series** to:
   - Click "Generate Selected Topics" to add them to the generation queue
   - Posts are generated asynchronously in the background
   - The new posts are automatically added to the series
+- **Rewrite Posts**: Regenerate content for any post in a series
+  - Click "Rewrite" button on any post
+  - AI generates fresh content while preserving the post ID
+  - Confirmation dialog prevents accidental rewrites
+  - Rewrite happens asynchronously in the queue
 - **Manage Series Posts**: View, reorder, or remove posts from a series
 
 **Example Workflow:**
@@ -164,7 +177,7 @@ The plugin includes automatic SEO optimization for the RankMath SEO plugin:
 - Click **Generate SEO** button on any post
 - SEO metadata will be generated and saved instantly
 
-See [RANKMATH_SEO_FEATURE.md](RANKMATH_SEO_FEATURE.md) for detailed documentation.
+See [docs/features/RANKMATH_SEO_FEATURE.md](docs/features/RANKMATH_SEO_FEATURE.md) for detailed documentation.
 
 ### 7. Monitor Queue
 
@@ -279,7 +292,7 @@ The health check provides:
 - Actionable recommendations for fixing issues
 - One-click refresh for updated status
 
-See [HEALTH_CHECK_FEATURE.md](HEALTH_CHECK_FEATURE.md) for detailed documentation.
+See [docs/features/HEALTH_CHECK_FEATURE.md](docs/features/HEALTH_CHECK_FEATURE.md) for detailed documentation.
 
 ## How It Works
 
@@ -379,7 +392,10 @@ The plugin uses WordPress Cron to schedule automated generation:
 
 ```
 wp-blog-agent/
-├── admin/
+├── .github/
+│   └── workflows/           # CI/CD workflows
+├── .wordpress-org/          # WordPress.org assets (banner, icon, screenshots)
+├── admin/                   # Admin UI pages
 │   ├── health-check-page.php
 │   ├── image-gen-page.php
 │   ├── logs-page.php
@@ -393,7 +409,13 @@ wp-blog-agent/
 │   │   └── admin.css
 │   └── js/
 │       └── admin.js
-├── includes/
+├── docs/                    # Documentation
+│   ├── features/            # Feature documentation
+│   ├── development/         # Development guides and test docs
+│   ├── ARCHITECTURE.md
+│   ├── DEPLOYMENT.md
+│   └── QUICKSTART.md
+├── includes/                # Core plugin classes
 │   ├── class-wp-blog-agent-activator.php
 │   ├── class-wp-blog-agent-admin.php
 │   ├── class-wp-blog-agent-deactivator.php
@@ -408,16 +430,19 @@ wp-blog-agent/
 │   ├── class-wp-blog-agent-rankmath.php
 │   ├── class-wp-blog-agent-scheduler.php
 │   ├── class-wp-blog-agent-series.php
+│   ├── class-wp-blog-agent-text-utils.php
 │   └── class-wp-blog-agent-validator.php
 ├── .gitignore
-├── ARCHITECTURE.md
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
 ├── LICENSE
-├── QUICKSTART.md
 ├── README.md
+├── readme.txt               # WordPress.org readme
 ├── bump-version.sh
+├── create-release-zip.sh
 ├── uninstall.php
+└── wp-blog-agent.php        # Main plugin file
+```
 └── wp-blog-agent.php
 ```
 
@@ -450,6 +475,59 @@ After running the script:
 2. Update `CHANGELOG.md` with actual changes for the version
 3. Commit the changes
 4. Create and push a git tag
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for complete deployment instructions including CI/CD workflows.
+
+### Testing
+
+The plugin includes a comprehensive PHPUnit test suite covering the core utility classes.
+
+#### Running Tests
+
+```bash
+# Install test dependencies
+composer install
+
+# Run all tests
+composer test
+
+# Run tests with detailed output
+./vendor/bin/phpunit --testdox
+
+# Generate code coverage report
+composer test-coverage
+```
+
+#### Test Coverage
+
+- **WP_Blog_Agent_Text_Utils** (18 tests): JSON encoding, UTF-8 handling, text sanitization
+- **WP_Blog_Agent_Validator** (23 tests): Input validation, API key validation, data sanitization
+- **WP_Blog_Agent_Logger** (13 tests): Logging functionality, log rotation, log cleanup
+
+See [TESTING.md](TESTING.md) for detailed testing documentation and guidelines.
+
+### CI/CD Workflows
+
+The plugin includes GitHub Actions workflows for automated deployment:
+
+- **Plugin Check** (`.github/workflows/plugin-check.yml`): Validates PHP syntax and runs WordPress Plugin Checker on every push/PR
+- **Deploy to WordPress.org** (`.github/workflows/deploy.yml`): Automatically deploys tagged releases to WordPress.org
+- **Create Release** (`.github/workflows/release.yml`): Creates GitHub releases with downloadable ZIP files
+
+To deploy a new version:
+```bash
+./bump-version.sh 1.0.3
+git add .
+git commit -m "Bump version to 1.0.3"
+git tag -a v1.0.3 -m "Version 1.0.3"
+git push origin main
+git push origin v1.0.3
+```
+
+The CI/CD workflows will automatically:
+1. Run plugin checks
+2. Create a GitHub release with ZIP file
+3. Deploy to WordPress.org (requires SVN credentials in repository secrets)
 
 ## Contributing
 

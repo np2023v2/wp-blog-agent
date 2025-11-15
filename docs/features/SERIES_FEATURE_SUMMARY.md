@@ -185,7 +185,26 @@ See `SERIES_TESTING_GUIDE.md` for comprehensive testing scenarios including:
 - Security verification
 - Performance testing
 
-### 10. Future Enhancements
+### 10. Recent Enhancements (v1.0.3+)
+
+#### Allow Manual Posts in Series
+- Users can now add any post to a series, not just AI-generated ones
+- Post filter dropdown allows filtering by:
+  - All Posts
+  - AI Generated Posts
+  - Manual Posts
+- Posts are organized in optgroups for better categorization
+- JavaScript-based filtering for smooth user experience
+
+#### Post Rewrite Functionality
+- Added "Rewrite" button for each post in a series
+- Allows regenerating post content while preserving post ID
+- Rewrite queued asynchronously for non-blocking experience
+- Confirmation dialog prevents accidental rewrites
+- Auto-generates featured image and SEO metadata if enabled
+- Tracks rewrite history via post metadata
+
+### 11. Future Enhancements
 
 Potential improvements for future versions:
 1. Manual post reordering within series
@@ -199,31 +218,35 @@ Potential improvements for future versions:
 9. Series cloning functionality
 10. Series search and filtering
 
-### 11. Known Limitations
+### 12. Known Limitations
 
 1. **AI Dependency**: Quality of suggestions depends on AI provider capabilities
 2. **Minimum Posts**: Requires at least 1 post for suggestions
 3. **Language**: AI suggestions work best with English content
 4. **Position Management**: No drag-and-drop reordering yet
 5. **Series Categories**: No hierarchical series structure
+6. **Rewrite Warning**: Post rewrite replaces all content - no undo feature
 
-### 12. Performance Considerations
+### 13. Performance Considerations
 
 - **Database Queries**: Optimized with proper indexes
 - **AJAX Requests**: Single request for suggestions
 - **AI API Calls**: One call per suggestion request (~5-10 seconds)
 - **Scalability**: Tested with series containing 50+ posts
 - **Memory**: Minimal memory footprint
+- **Rewrite Operations**: Queued asynchronously to prevent UI blocking
 
-### 13. Backwards Compatibility
+### 14. Backwards Compatibility
 
 - ✅ No breaking changes to existing features
 - ✅ Existing posts unaffected
 - ✅ Database migrations handled by activator
 - ✅ Optional feature - can be ignored
 - ✅ No changes to existing workflows
+- ✅ Manual posts can now be added to series
+- ✅ Post rewrite is non-destructive to other post metadata
 
-### 14. Documentation Updates
+### 15. Documentation Updates
 
 All documentation has been updated:
 - README.md - User guide with examples
@@ -231,6 +254,7 @@ All documentation has been updated:
 - CHANGELOG.md - Version history
 - New testing guide created
 - New feature summary created
+- Updated with manual post selection and rewrite features
 
 ## Conclusion
 
@@ -242,6 +266,8 @@ The Post Series feature has been successfully implemented with:
 - ✅ User-friendly interface
 - ✅ Complete documentation
 - ✅ Testing guidelines
+- ✅ Manual post selection for series
+- ✅ Post rewrite/regeneration capability
 
 The implementation is production-ready pending final user acceptance testing.
 
