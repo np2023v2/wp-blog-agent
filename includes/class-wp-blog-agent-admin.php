@@ -20,6 +20,7 @@ class WP_Blog_Agent_Admin {
         add_action('admin_post_wp_blog_agent_add_post_to_series', array($this, 'handle_add_post_to_series'));
         add_action('admin_post_wp_blog_agent_remove_post_from_series', array($this, 'handle_remove_post_from_series'));
         add_action('admin_post_wp_blog_agent_generate_from_suggestion', array($this, 'handle_generate_from_suggestion'));
+        add_action('admin_post_wp_blog_agent_rewrite_post', array($this, 'handle_rewrite_post'));
         
         // AJAX handlers for RankMath SEO generation
         add_action('wp_ajax_wp_blog_agent_generate_seo', array($this, 'ajax_generate_seo'));
@@ -1044,6 +1045,65 @@ class WP_Blog_Agent_Admin {
             wp_redirect(admin_url('admin.php?page=wp-blog-agent-series&view=' . $series_id . '&error=queue_failed'));
         }
 
+        exit;
+    }
+    
+    /**
+     * Handle rewrite post
+     */
+    public function handle_rewrite_post() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to perform this action.'));
+        }
+        
+        check_admin_referer('wp_blog_agent_rewrite_post');
+        
+        $series_id = isset($_GET['series_id']) ? intval($_GET['series_id']) : 0;
+        $post_id = isset($_GET['post_id']) ? intval($_GET['post_id']) : 0;
+        
+        if ($post_id <= 0) {
+            wp_redirect(admin_url('admin.php?page=wp-blog-agent-series&view=' . $series_id . '&error=invalid_data'));
+            exit;
+        }
+        
+        // Get the post to rewrite
+        $post = get_post($post_id);
+        if (!$post) {
+            wp_redirect(admin_url('admin.php?page=wp-blog-agent-series&view=' . $series_id . '&error=post_not_found'));
+            exit;
+        }
+        
+        WP_Blog_Agent_Logger::info('Rewrite post queued', array(
+            'post_id' => $post_id,
+            'series_id' => $series_id,
+            'post_title' => $post->post_title
+        ));
+        
+        // Enqueue rewrite task
+        $queue_id = WP_Blog_Agent_Queue::enqueue(
+            null, // topic_id is null for rewrite
+            'rewrite',
+            array(
+                'post_id' => $post_id,
+                'series_id' => $series_id,
+                'topic_text' => $post->post_title // Use existing title as topic
+            )
+        );
+        
+        if ($queue_id) {
+            WP_Blog_Agent_Logger::info('Post rewrite enqueued successfully', array(
+                'queue_id' => $queue_id,
+                'post_id' => $post_id
+            ));
+            wp_redirect(admin_url('admin.php?page=wp-blog-agent-series&view=' . $series_id . '&rewrite_queued=' . $post_id));
+        } else {
+            WP_Blog_Agent_Logger::error('Failed to enqueue post rewrite', array(
+                'post_id' => $post_id,
+                'series_id' => $series_id
+            ));
+            wp_redirect(admin_url('admin.php?page=wp-blog-agent-series&view=' . $series_id . '&error=rewrite_failed'));
+        }
+        
         exit;
     }
     

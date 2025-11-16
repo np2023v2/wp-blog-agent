@@ -27,6 +27,7 @@ define('WP_BLOG_AGENT_PLUGIN_FILE', __FILE__);
 require_once WP_BLOG_AGENT_PLUGIN_DIR . 'includes/class-wp-blog-agent-logger.php';
 require_once WP_BLOG_AGENT_PLUGIN_DIR . 'includes/class-wp-blog-agent-text-utils.php';
 require_once WP_BLOG_AGENT_PLUGIN_DIR . 'includes/class-wp-blog-agent-validator.php';
+require_once WP_BLOG_AGENT_PLUGIN_DIR . 'includes/class-wp-blog-agent-cron.php';
 require_once WP_BLOG_AGENT_PLUGIN_DIR . 'includes/class-wp-blog-agent-activator.php';
 require_once WP_BLOG_AGENT_PLUGIN_DIR . 'includes/class-wp-blog-agent-deactivator.php';
 require_once WP_BLOG_AGENT_PLUGIN_DIR . 'includes/class-wp-blog-agent-queue.php';
@@ -66,6 +67,9 @@ add_action('admin_init', 'wp_blog_agent_check_upgrade');
 function wp_blog_agent_init() {
     // Initialize logger
     WP_Blog_Agent_Logger::init();
+    
+    // Initialize cron module
+    WP_Blog_Agent_Cron::init();
     
     $admin = new WP_Blog_Agent_Admin();
     $scheduler = new WP_Blog_Agent_Scheduler();

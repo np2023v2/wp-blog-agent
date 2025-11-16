@@ -94,9 +94,8 @@ class WP_Blog_Agent_Activator {
             add_option('wp_blog_agent_auto_generate_image', 'no');
         }
         
-        // Schedule cron event if not already scheduled
-        if (!wp_next_scheduled('wp_blog_agent_generate_post')) {
-            wp_schedule_event(time(), 'daily', 'wp_blog_agent_generate_post');
-        }
+        // Schedule cron events using the cron module
+        $frequency = get_option('wp_blog_agent_schedule_frequency', 'daily');
+        WP_Blog_Agent_Cron::schedule_post_generation($frequency);
     }
 }

@@ -115,9 +115,8 @@ class WP_Blog_Agent_Queue {
             'trigger' => $trigger
         ]);
 
-        if (!wp_next_scheduled('wp_blog_agent_process_queue')) {
-            wp_schedule_single_event(time(), 'wp_blog_agent_process_queue');
-        }
+        // Schedule queue processing using cron module
+        WP_Blog_Agent_Cron::schedule_queue_processing();
 
         return $queue_id;
     }
@@ -249,9 +248,9 @@ class WP_Blog_Agent_Queue {
             'error' => $error_message
         ));
         
-        // Schedule retry if not max attempts reached
-        if ($attempts < 3 && !wp_next_scheduled('wp_blog_agent_process_queue')) {
-            wp_schedule_single_event(time() + 300, 'wp_blog_agent_process_queue'); // Retry in 5 minutes
+        // Schedule retry if not max attempts reached using cron module
+        if ($attempts < 3) {
+            WP_Blog_Agent_Cron::schedule_queue_processing(300); // Retry in 5 minutes
         }
         
         return $result !== false;
@@ -276,8 +275,11 @@ class WP_Blog_Agent_Queue {
 
         self::mark_processing($task->id);
 
-        // Check if this is a series generation task (has topic_text and series_id)
-        if (!empty($task->topic_text) && !empty($task->series_id)) {
+        // Check if this is a rewrite task
+        if ($task->trigger_source === 'rewrite') {
+            // Rewrite post
+            $result = self::rewrite_post($task);
+        } elseif (!empty($task->topic_text) && !empty($task->series_id)) {
             // Series generation
             $result = self::generate_series_post($task);
         } else {
@@ -292,9 +294,10 @@ class WP_Blog_Agent_Queue {
             self::mark_completed($task->id, $result);
         }
 
+        // Schedule next task processing using cron module
         $next_task = self::get_next_task();
-        if ($next_task && !wp_next_scheduled('wp_blog_agent_process_queue')) {
-            wp_schedule_single_event(time() + 10, 'wp_blog_agent_process_queue');
+        if ($next_task) {
+            WP_Blog_Agent_Cron::schedule_queue_processing(10);
         }
     }
     
@@ -427,6 +430,150 @@ class WP_Blog_Agent_Queue {
                 }
             } catch (Exception $e) {
                 WP_Blog_Agent_Logger::error('Exception during auto-image generation for series post', array(
+                    'error' => $e->getMessage()
+                ));
+            }
+        }
+        
+        // Auto-generate RankMath SEO meta if enabled
+        $auto_generate_seo = get_option('wp_blog_agent_auto_generate_seo', 'no');
+        if ($auto_generate_seo === 'yes') {
+            $rankmath = new WP_Blog_Agent_RankMath();
+            $rankmath->generate_seo_meta($post_id);
+        }
+        
+        return $post_id;
+    }
+    
+    /**
+     * Rewrite an existing post with new AI-generated content
+     * 
+     * @param object $task Queue task object with post_id
+     * @return int|WP_Error Post ID on success, WP_Error on failure
+     */
+    private static function rewrite_post($task) {
+        // Extract post_id from metadata
+        $metadata = maybe_unserialize($task->metadata);
+        $post_id = isset($metadata['post_id']) ? intval($metadata['post_id']) : 0;
+        $topic = $task->topic_text;
+        
+        if ($post_id <= 0) {
+            return new WP_Error('invalid_post_id', 'Invalid post ID for rewrite');
+        }
+        
+        // Get the existing post
+        $post = get_post($post_id);
+        if (!$post) {
+            return new WP_Error('post_not_found', 'Post not found for rewrite');
+        }
+        
+        WP_Blog_Agent_Logger::info('Rewriting post', array(
+            'post_id' => $post_id,
+            'topic' => $topic,
+            'original_title' => $post->post_title
+        ));
+        
+        // Get AI provider
+        $provider = get_option('wp_blog_agent_ai_provider', 'openai');
+        
+        // Generate new content
+        if ($provider === 'gemini') {
+            $ai = new WP_Blog_Agent_Gemini();
+        } elseif ($provider === 'ollama') {
+            $ai = new WP_Blog_Agent_Ollama();
+        } else {
+            $ai = new WP_Blog_Agent_OpenAI();
+        }
+        
+        $content = $ai->generate_content($topic, array(), array());
+        
+        if (is_wp_error($content)) {
+            WP_Blog_Agent_Logger::error('Post rewrite content generation failed', array(
+                'error' => $content->get_error_message(),
+                'provider' => $provider,
+                'post_id' => $post_id
+            ));
+            return $content;
+        }
+        
+        WP_Blog_Agent_Logger::info('Rewrite content generated successfully', array('provider' => $provider));
+        
+        // Parse content to extract title and body
+        $generator = new WP_Blog_Agent_Generator();
+        $parsed = $generator->parse_content($content);
+        
+        // Process inline images if enabled
+        $auto_generate_inline_images = get_option('wp_blog_agent_auto_generate_inline_images', 'no');
+        if ($auto_generate_inline_images === 'yes') {
+            WP_Blog_Agent_Logger::info('Processing inline image placeholders for rewritten post');
+            $parsed['content'] = $generator->process_image_placeholders($parsed['content'], $topic);
+        }
+        
+        // Update the post with new content
+        $post_data = array(
+            'ID'           => $post_id,
+            'post_title'   => $parsed['title'],
+            'post_content' => $parsed['content'],
+            'post_excerpt' => $generator->generate_excerpt($parsed['content']),
+        );
+        
+        $result = wp_update_post($post_data);
+        
+        if (is_wp_error($result)) {
+            WP_Blog_Agent_Logger::error('Post rewrite failed', array('error' => $result->get_error_message()));
+            return $result;
+        }
+        
+        WP_Blog_Agent_Logger::success('Post rewritten successfully', array(
+            'post_id' => $post_id,
+            'new_title' => $parsed['title']
+        ));
+        
+        // Update metadata
+        update_post_meta($post_id, '_wp_blog_agent_generated', true);
+        update_post_meta($post_id, '_wp_blog_agent_provider', $provider);
+        update_post_meta($post_id, '_wp_blog_agent_rewritten', true);
+        update_post_meta($post_id, '_wp_blog_agent_rewrite_date', current_time('mysql'));
+        
+        // Auto-generate featured image if enabled
+        $auto_generate_image = get_option('wp_blog_agent_auto_generate_image', 'no');
+        if ($auto_generate_image === 'yes') {
+            try {
+                $prompt = sprintf(
+                    'Create a professional, eye-catching blog header image for a blog post titled "%s" about %s.',
+                    $parsed['title'],
+                    $topic
+                );
+                
+                WP_Blog_Agent_Logger::info('Auto-generating featured image for rewritten post', array(
+                    'post_id' => $post_id,
+                    'prompt' => substr($prompt, 0, 100)
+                ));
+                
+                $image_generator = new WP_Blog_Agent_Image_Generator();
+                $params = array(
+                    'aspectRatio' => '16:9',
+                    'imageSize' => '1K',
+                    'sampleCount' => 1,
+                    'outputMimeType' => 'image/jpeg',
+                    'personGeneration' => 'ALLOW_ALL'
+                );
+                
+                $attachment_id = $image_generator->generate_and_save($prompt, $post_id, $params);
+                
+                if (!is_wp_error($attachment_id)) {
+                    update_post_meta($attachment_id, '_wp_blog_agent_generated_image', true);
+                    update_post_meta($attachment_id, '_wp_blog_agent_image_prompt', $prompt);
+                    update_post_meta($attachment_id, '_wp_blog_agent_attached_post', $post_id);
+                    update_post_meta($attachment_id, '_wp_blog_agent_auto_generated', true);
+                    
+                    WP_Blog_Agent_Logger::success('Featured image auto-generated for rewritten post', array(
+                        'post_id' => $post_id,
+                        'attachment_id' => $attachment_id
+                    ));
+                }
+            } catch (Exception $e) {
+                WP_Blog_Agent_Logger::error('Exception during auto-image generation for rewritten post', array(
                     'error' => $e->getMessage()
                 ));
             }
